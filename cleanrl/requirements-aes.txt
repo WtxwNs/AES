@@ -1,0 +1,6 @@
+gymnasium[mujoco]>=0.29.1
+stable-baselines3>=2.0.0
+tensorboard
+tyro
+torch
+numpy

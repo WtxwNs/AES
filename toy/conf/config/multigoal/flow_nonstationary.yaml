@@ -1,0 +1,6 @@
+env: NonStationaryMultiGoal-v0
+algo: flow
+description: baseline
+use_aes: !!bool False
+drift_pattern: abrupt
+alpha: !!float 2.5

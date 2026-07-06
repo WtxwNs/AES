@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+
+# Training outputs
+runs/
+runs_*/
+cleanrl/runs/
+cleanrl/runs_*/
+skrl/runs/
+skrl/runs_*/
+toy/ckpts/
+toy/runs/
+
+# Local logs and checkpoints
+*.pt
+*.pth
+events.out.tfevents.*

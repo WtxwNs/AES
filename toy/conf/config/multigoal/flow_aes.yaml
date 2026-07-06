@@ -1,0 +1,11 @@
+env: NonStationaryMultiGoal-v0
+algo: flow
+description: aes
+use_aes: !!bool True
+drift_pattern: abrupt
+alpha: !!float 2.5
+aes_q: !!float 0.9
+aes_beta: !!float 0.95
+aes_kappa: !!float 1.0
+aes_lambda_min: !!float 1e-4
+aes_lambda_max: !!float 1.0
