@@ -100,10 +100,13 @@ parts of this repository are based on frozen versions of:
 If you use this repository, please cite:
 
 ```bibtex
-@inproceedings{wang2026tracking,
-    title={Tracking Drift: Variation-Aware Entropy Scheduling for Non-Stationary Reinforcement Learning},
-    author={Wang, Tongxi and Xia, Zhuoyang and Chen, Xinran and Liu, Shan},
-    booktitle={Proceedings of the 43rd International Conference on Machine Learning},
-    year={2026}
+@misc{wang2026trackingdriftvariationawareentropy,
+      title={Tracking Drift: Variation-Aware Entropy Scheduling for Non-Stationary Reinforcement Learning}, 
+      author={Tongxi Wang and Zhuoyang Xia and Xinran Chen and Shan Liu},
+      year={2026},
+      eprint={2601.19624},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2601.19624}, 
 }
 ```
