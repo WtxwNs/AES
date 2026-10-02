@@ -46,7 +46,7 @@ def plot_traj_multigoal(critic, file_name='_.png', runs=8, deterministic=False, 
         for i in range(runs):
             rewards_ = np.zeros((1,))
             dones = np.zeros((1,)).astype(bool)
-            s, info = env.reset(seed=range(1))
+            s, info = env.reset(seed=i)
             t = 0
             path = []
             reward = []
@@ -73,7 +73,7 @@ def plot_value(critic, file_name='_.png'):
     critic.eval()
     grid_size = 100
     xx, yy = torch.meshgrid(torch.linspace(-8, 8, grid_size), torch.linspace(-8, 8, grid_size))
-    zz = torch.cat([xx.unsqueeze(2), yy.unsqueeze(2)], 2).view(-1, 2).to('cuda')
+    zz = torch.cat([xx.unsqueeze(2), yy.unsqueeze(2)], 2).view(-1, 2).to(next(critic.parameters()).device)
 
     neg_energy = critic.get_v(obs=torch.cat((zz, zz), dim=0))
     neg_energy = neg_energy[:neg_energy.shape[0]//2].view(*xx.shape).detach().cpu().numpy()

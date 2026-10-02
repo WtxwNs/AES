@@ -1,4 +1,5 @@
 import argparse
+from copy import deepcopy
 
 from skrl.resources.preprocessors.torch import RunningStandardScaler
 
@@ -9,8 +10,9 @@ from skrl.agents.torch.sac import SAC_DEFAULT_CONFIG
 
 
 def base_cfg(args):
-    cfg = (FLOW_DEFAULT_CONFIG if args.algorithm == "flow" else SAC_DEFAULT_CONFIG).copy()
+    cfg = deepcopy(FLOW_DEFAULT_CONFIG if args.algorithm == "flow" else SAC_DEFAULT_CONFIG)
     cfg["task_name"] = args.task
+    cfg["seed"] = args.seed
     cfg["batch_size"] = args.batch_size
     cfg["num_envs"] = args.num_envs
     cfg["timesteps"] = args.timesteps
@@ -43,6 +45,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--algorithm", choices=["sac", "flow"], required=True)
     parser.add_argument("--task", default="AllegroHand")
+    parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--timesteps", type=int, default=1_000_000)
     parser.add_argument("--num-envs", type=int, default=512)
     parser.add_argument("--batch-size", type=int, default=256)

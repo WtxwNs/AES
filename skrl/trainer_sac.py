@@ -45,13 +45,14 @@ class Critic(DeterministicMixin, Model):
 
 def _train(cfg):
     # seed for reproducibility
-    set_seed()  # e.g. `set_seed(42)` for fixed seed
+    seed = set_seed(cfg.get("seed"))
 
     # load and wrap the Omniverse Isaac Gym environment
     env = load_omniverse_isaacgym_env(
         task_name=cfg['task_name'],
         headless=True,
         num_envs=cfg['num_envs'],
+        cli_args=[f"seed={seed}"],
         parse_args=False,
     )
     env = maybe_wrap_isaac_drift(env, cfg)
