@@ -11,7 +11,7 @@ from tensorboard.backend.event_processing.event_accumulator import EventAccumula
 def read_scalar_series(run_dir, tag):
     points = []
     for event_file in Path(run_dir).rglob("events.out.tfevents.*"):
-        acc = EventAccumulator(str(event_file))
+        acc = EventAccumulator(str(event_file), size_guidance={"scalars": 0})
         acc.Reload()
         if tag not in acc.Tags().get("scalars", []):
             continue
@@ -25,7 +25,7 @@ def auc(points):
         return np.nan
     x = np.array([p[0] for p in points], dtype=np.float64)
     y = np.array([p[1] for p in points], dtype=np.float64)
-    return float(np.trapezoid(y, x) / max(x[-1] - x[0], 1.0))
+    return float(np.sum(np.diff(x) * (y[:-1] + y[1:]) / 2.0) / max(x[-1] - x[0], 1.0))
 
 
 def main():

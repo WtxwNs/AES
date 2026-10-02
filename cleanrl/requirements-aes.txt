@@ -1,5 +1,6 @@
-gymnasium[mujoco]>=0.29.1
-stable-baselines3>=2.0.0
+# These frozen CleanRL loops rely on the pre-1.0 same-step vector autoreset API.
+gymnasium[mujoco]==0.29.1
+stable-baselines3>=2.0.0,<2.4
 tensorboard
 tyro
 torch

@@ -107,6 +107,7 @@ def main():
     assert_exists()
     compile_targets()
     dry_run_launchers()
+    run([sys.executable, "-m", "unittest", "discover", "-s", "tests", "-p", "test_release_regressions.py"])
     cleanup_python_cache()
     if not args.skip_cache_check:
         assert_no_generated_python_cache()

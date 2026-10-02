@@ -80,6 +80,8 @@ class Args:
     """the maximum norm for the gradient clipping"""
     target_kl: float = None
     """the target KL divergence threshold"""
+    description: str = ""
+    """output directory for TensorBoard logs and saved models"""
     use_aes: bool = False
     """use Adaptive Entropy Scheduling instead of fixed entropy coefficient"""
     aes_q: float = 0.9
@@ -108,7 +110,7 @@ class Args:
     """the number of iterations (computed in runtime)"""
 
 
-def make_env(env_id, idx, capture_video, run_name, gamma, args=None):
+def make_env(env_id, idx, capture_video, run_name, gamma, args=None, evaluation=False):
     def thunk():
         if capture_video and idx == 0:
             env = gym.make(env_id, render_mode="rgb_array")
@@ -120,6 +122,8 @@ def make_env(env_id, idx, capture_video, run_name, gamma, args=None):
         env = gym.wrappers.FlattenObservation(env)  # deal with dm_control's Dict observation space
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = gym.wrappers.ClipAction(env)
+        if evaluation:
+            return env
         env = gym.wrappers.NormalizeObservation(env)
         clipped_obs_space = gym.spaces.Box(
             low=np.full(env.observation_space.shape, -10.0, dtype=np.float32),
@@ -175,13 +179,16 @@ class Agent(nn.Module):
         return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(x)
 
 
-def evaluate(envs, agent, device):
+def evaluate(envs, agent, device, observation_rms):
     with torch.no_grad():
         rewards = np.zeros((envs.num_envs,))
         dones = np.zeros((envs.num_envs,), dtype=bool)
         obs, _ = envs.reset(seed=range(envs.num_envs))
         while not all(dones):
-            action_mean = agent.actor_mean(torch.Tensor(obs).to(device))
+            normalized_obs = np.clip(
+                (obs - observation_rms.mean) / np.sqrt(observation_rms.var + 1e-8), -10, 10
+            )
+            action_mean = agent.actor_mean(torch.Tensor(normalized_obs).to(device))
             obs, reward, terminations, truncations, _ = envs.step(action_mean.cpu().numpy())
             done = np.logical_or(terminations, truncations)
             rewards += reward * (1 - dones)
@@ -207,7 +214,8 @@ if __name__ == "__main__":
             monitor_gym=True,
             save_code=True,
         )
-    writer = SummaryWriter(f"runs/{run_name}")
+    run_dir = args.description or f"runs/{run_name}"
+    writer = SummaryWriter(run_dir)
     writer.add_text(
         "hyperparameters",
         "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
@@ -226,7 +234,7 @@ if __name__ == "__main__":
         [make_env(args.env_id, i, args.capture_video, run_name, args.gamma, args) for i in range(args.num_envs)]
     )
     test_envs = gym.vector.SyncVectorEnv(
-        [make_env(args.env_id, i, False, run_name, args.gamma, args) for i in range(10)]
+        [make_env(args.env_id, i, False, run_name, args.gamma, args, evaluation=True) for i in range(10)]
     )
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
@@ -253,6 +261,7 @@ if __name__ == "__main__":
     next_obs = torch.Tensor(next_obs).to(device)
     next_done = torch.zeros(args.num_envs).to(device)
 
+    next_eval_step = args.eval_frequency
     for iteration in range(1, args.num_iterations + 1):
         # Annealing the rate if instructed to do so.
         if args.anneal_lr:
@@ -383,14 +392,16 @@ if __name__ == "__main__":
         writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
         writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
         writer.add_scalar("losses/explained_variance", explained_var, global_step)
-        if global_step % args.eval_frequency == 0:
+        if args.eval_frequency > 0 and global_step >= next_eval_step:
             set_global_step(test_envs, global_step)
-            writer.add_scalar("Test/return", evaluate(test_envs, agent, device), global_step)
+            observation_rms = envs.envs[0].get_wrapper_attr("obs_rms")
+            writer.add_scalar("Test/return", evaluate(test_envs, agent, device, observation_rms), global_step)
+            next_eval_step = (global_step // args.eval_frequency + 1) * args.eval_frequency
         print("SPS:", int(global_step / (time.time() - start_time)))
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
     if args.save_model:
-        model_path = f"runs/{run_name}/{args.exp_name}.cleanrl_model"
+        model_path = os.path.join(run_dir, f"{args.exp_name}.cleanrl_model")
         torch.save(agent.state_dict(), model_path)
         print(f"model saved to {model_path}")
         from cleanrl_utils.evals.ppo_eval import evaluate
@@ -413,7 +424,7 @@ if __name__ == "__main__":
 
             repo_name = f"{args.env_id}-{args.exp_name}-seed{args.seed}"
             repo_id = f"{args.hf_entity}/{repo_name}" if args.hf_entity else repo_name
-            push_to_hub(args, episodic_returns, repo_id, "PPO", f"runs/{run_name}", f"videos/{run_name}-eval")
+            push_to_hub(args, episodic_returns, repo_id, "PPO", run_dir, f"videos/{run_name}-eval")
 
     envs.close()
     test_envs.close()

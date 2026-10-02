@@ -1,5 +1,8 @@
 import os
 import sys
+import random
+import numpy as np
+import torch
 import gymnasium as gym
 from gymnasium.wrappers import RescaleAction
 import argparse
@@ -22,6 +25,9 @@ def main(cfg : DictConfig) -> None:
     # parse args
     cfg = flatten_cfg(cfg) # flatten the nested Dict structure from hydra
     args = argparse.Namespace(**cfg)
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
 
     # logger init
     save_path = os.path.join('ckpts', args.env, args.algo, args.description)
@@ -41,6 +47,7 @@ def main(cfg : DictConfig) -> None:
         }
     train_envs = gym.make_vec(args.env, num_envs=1, **env_kwargs)
     test_envs = gym.make_vec(args.env, num_envs=args.test_num, **env_kwargs)
+    train_envs.action_space.seed(args.seed)
     train_envs = maybe_rescale_action(train_envs) # rescale tanh action (-1~1) to env action space when supported
     test_envs = maybe_rescale_action(test_envs) # rescale tanh action (-1~1) to env action space when supported
     args.state_sizes = train_envs.observation_space.shape[1]

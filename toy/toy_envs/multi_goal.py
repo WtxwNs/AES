@@ -54,10 +54,11 @@ class MultiGoal(gym.Env):
         self.timestep = 0
 
     def reset(self, seed=None, options=None):
+        super().reset(seed=seed)
         unclipped_observation = (
             self.init_mu
             + self.init_sigma
-            * np.random.normal(size=self.dynamics.s_dim))
+            * self.np_random.normal(size=self.dynamics.s_dim))
         self.observation = np.clip(
             unclipped_observation,
             self.observation_space.low,
@@ -76,7 +77,7 @@ class MultiGoal(gym.Env):
             self.action_space.low,
             self.action_space.high).ravel()
 
-        observation = self.dynamics.forward(self.observation, action)
+        observation = self.dynamics.forward(self.observation, action, rng=self.np_random)
         observation = np.clip(
             observation,
             self.observation_space.low,
@@ -188,10 +189,11 @@ class PointDynamics(object):
         self.s_dim = dim
         self.a_dim = dim
 
-    def forward(self, state, action):
+    def forward(self, state, action, rng=None):
+        rng = np.random.default_rng() if rng is None else rng
         mu_next = state + action
         state_next = mu_next + self.sigma * \
-            np.random.normal(size=self.s_dim)
+            rng.normal(size=self.s_dim)
         return state_next
 
 

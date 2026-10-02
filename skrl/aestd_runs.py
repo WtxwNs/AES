@@ -22,6 +22,8 @@ def command(args, algorithm, task, drift, seed, aes):
         algorithm,
         "--task",
         task,
+        "--seed",
+        str(seed),
         "--timesteps",
         str(args.timesteps),
         "--num-envs",

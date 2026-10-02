@@ -66,7 +66,7 @@ class Policy(FlowMixin, Model):
 
 def _train(cfg):
     # seed for reproducibility
-    set_seed()  # e.g. `set_seed(42)` for fixed seed
+    seed = set_seed(cfg.get("seed"))
 
     # load and wrap the Omniverse Isaac Gym environment
     # Ref: https://github.com/ray-project/ray/issues/3265#issuecomment-510215566
@@ -75,6 +75,7 @@ def _train(cfg):
         task_name=cfg['task_name'],
         headless=True,
         num_envs=cfg['num_envs'],
+        cli_args=[f"seed={seed}"],
         parse_args=False,
     )
     env = maybe_wrap_isaac_drift(env, cfg)
