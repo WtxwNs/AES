@@ -244,13 +244,13 @@ class NonStationaryMultiGoal(MultiGoal):
             return np.zeros(2, dtype=np.float32)
 
         segment = max(self.drift_fraction, 1e-6)
-        local = (progress % segment) / segment
+        jumps = min(int(np.floor(progress / segment + 1e-10)), int(np.ceil(1 / segment)) - 1)
+        local = float(np.clip(progress / segment - jumps, 0., 1.))
 
         if self.drift_pattern == "abrupt":
-            jumps = int(progress / segment)
             if jumps == 0:
                 return np.zeros(2, dtype=np.float32)
-            sign = 1.0 if jumps % 2 else -1.0
+            sign = 1.0 if jumps % 2 else 0.0
             return sign * self.abrupt_distance * self._drift_direction
 
         if self.drift_pattern == "linear":
@@ -263,7 +263,6 @@ class NonStationaryMultiGoal(MultiGoal):
             return self.periodic_amplitude * np.array((np.sin(phase), np.cos(phase)), dtype=np.float32)
 
         if self.drift_pattern == "mixed":
-            jumps = int(progress / segment)
             if jumps == 0:
                 return np.zeros(2, dtype=np.float32)
             abrupt = (0.5 if jumps % 2 == 0 else -0.5) * self.abrupt_distance * self._drift_direction

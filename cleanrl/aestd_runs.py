@@ -11,6 +11,7 @@ ALGORITHMS = {
     "sac": "cleanrl/sac_continuous_action.py",
     "ppo": "cleanrl/ppo_continuous_action.py",
     "flow": "cleanrl/flow_continuous_action.py",
+    "sql": "cleanrl/sql_continuous_action.py",
 }
 
 MUJOCO_ENVS = ["Hopper-v4", "HalfCheetah-v4", "Walker2d-v4", "Ant-v4", "Humanoid-v4"]
@@ -39,6 +40,8 @@ def build_command(args, algorithm, env_id, drift, seed, aes):
         "--eval-frequency",
         str(args.eval_frequency),
     ]
+    if env_id == "Pendulum-v1":
+        command.remove("--use-nonstationary-env")
     if aes:
         command += [
             "--use-aes",
@@ -52,13 +55,13 @@ def build_command(args, algorithm, env_id, drift, seed, aes):
     if args.cuda is False:
         command += ["--no-cuda"]
     if algorithm == "ppo":
-        command += ["--num-envs", str(args.num_envs), "--num-steps", str(args.num_steps)]
+        command += ["--num-envs", str(args.num_envs), "--num-steps", str(args.num_steps), "--num-minibatches", str(getattr(args, "num_minibatches", 10))]
     return command
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--algorithms", nargs="+", default=["sac", "ppo", "flow"], choices=ALGORITHMS)
+    parser.add_argument("--algorithms", nargs="+", default=["sac", "ppo", "sql", "flow"], choices=ALGORITHMS)
     parser.add_argument("--envs", nargs="+", default=MUJOCO_ENVS)
     parser.add_argument("--drifts", nargs="+", default=DRIFTS)
     parser.add_argument("--seeds", nargs="+", type=int, default=SEEDS)
@@ -69,7 +72,8 @@ def main():
     parser.add_argument("--aes-beta", type=float, default=0.95)
     parser.add_argument("--aes-kappa", type=float, default=1.0)
     parser.add_argument("--num-envs", type=int, default=1)
-    parser.add_argument("--num-steps", type=int, default=2048)
+    parser.add_argument("--num-steps", type=int, default=1000)
+    parser.add_argument("--num-minibatches", type=int, default=10)
     parser.add_argument("--cuda", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()

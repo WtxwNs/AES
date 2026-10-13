@@ -52,12 +52,12 @@ class LauncherTests(unittest.TestCase):
         args = SimpleNamespace(eval_frequency=10000)
         next_eval_step = args.eval_frequency
         evaluations = []
-        for global_step in range(2048, 1000001, 2048):
+        for global_step in range(1, 1000001):
             if eval(code, {}, dict(args=args, global_step=global_step, next_eval_step=next_eval_step)):
                 evaluations.append(global_step)
                 next_eval_step = (global_step // args.eval_frequency + 1) * args.eval_frequency
-        self.assertEqual(evaluations[0], 10240)
-        self.assertEqual(len(evaluations), 99)
+        self.assertEqual(evaluations[0], 10000)
+        self.assertEqual(len(evaluations), 100)
 
 
 if __name__ == "__main__":

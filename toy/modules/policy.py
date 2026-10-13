@@ -75,7 +75,7 @@ class FlowPolicy(nn.Module):
     def sample(self, num_samples, obs, deterministic=False):
         obs = torch.as_tensor(obs, dtype=torch.float32, device=self.device)
         if deterministic: # (Warning: This is only implemented for FlowAgent with the additive coupling layers and the Gaussian prior)
-            eps = torch.randn((num_samples,) + self.prior.shape, dtype=obs.dtype, device=obs.device)
+            eps = torch.zeros((num_samples,) + self.prior.shape, dtype=obs.dtype, device=obs.device)
             act, _ = self.prior.get_mean_std(eps, context=obs)
             log_q = self.prior.log_prob(act, context=obs)
         else:

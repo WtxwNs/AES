@@ -57,10 +57,10 @@ class NonStationaryMujocoWrapper(gym.Wrapper):
             return 1.0, 1.0
 
         segment = max(self.drift_fraction, 1e-6)
-        local = (progress % segment) / segment
+        jumps = min(int(np.floor(progress / segment + 1e-10)), int(np.ceil(1 / segment)) - 1)
+        local = float(np.clip(progress / segment - jumps, 0., 1.))
 
         if self.drift_pattern == "abrupt":
-            jumps = int(progress / segment)
             if jumps == 0:
                 return 1.0, 1.0
             rng = np.random.default_rng(jumps)
@@ -85,7 +85,6 @@ class NonStationaryMujocoWrapper(gym.Wrapper):
             )
 
         if self.drift_pattern == "mixed":
-            jumps = int(progress / segment)
             if jumps == 0:
                 return 1.0, 1.0
             abrupt = 1.0 if jumps % 2 == 0 else 0.0
@@ -101,6 +100,8 @@ class NonStationaryMujocoWrapper(gym.Wrapper):
 def maybe_wrap_nonstationary(env, args):
     if not getattr(args, "use_nonstationary_env", False):
         return env
+    if hasattr(env.unwrapped, "_goal_shift"):
+        return env
     return NonStationaryMujocoWrapper(
         env,
         drift_pattern=args.drift_pattern,
@@ -114,7 +115,28 @@ def maybe_wrap_nonstationary(env, args):
 
 
 def set_global_step(envs, step):
-    try:
-        envs.call("set_global_step", int(step))
-    except Exception:
-        pass
+    for env in envs.envs:
+        current = env
+        while isinstance(current, gym.Wrapper):
+            if isinstance(current, NonStationaryMujocoWrapper):
+                current.set_global_step(step)
+                break
+            current = current.env
+        if hasattr(current.unwrapped, "_goal_shift"):
+            current.unwrapped.set_global_step(step)
+
+
+def make_task(env_id, args=None, **kwargs):
+    """Use the same Toy environment for every carrier, without global registration."""
+    if env_id != "NonStationaryMultiGoal-v0":
+        return gym.make(env_id, **kwargs)
+    import importlib.util
+    from pathlib import Path
+    path = Path(__file__).resolve().parents[2] / "toy/toy_envs/multi_goal.py"
+    spec = importlib.util.spec_from_file_location("aes_multi_goal", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.NonStationaryMultiGoal(
+        drift_pattern=args.drift_pattern if args and args.use_nonstationary_env else "steady",
+        total_steps=args.total_timesteps if args else 1_000_000,
+        drift_fraction=args.drift_fraction if args else .2)

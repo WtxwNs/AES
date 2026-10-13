@@ -15,6 +15,10 @@ class AESConfig:
 
 class AESScheduler:
     def __init__(self, config: AESConfig):
+        if not (0 <= config.q <= 1 and 0 <= config.beta < 1 and config.kappa > 0
+                and 0 < config.lambda_min <= config.lambda_max
+                and all(math.isfinite(v) for v in vars(config).values())):
+            raise ValueError("Invalid AES configuration")
         self.config = config
         self.ema = None
         self.accumulated = 0.0
@@ -22,6 +26,8 @@ class AESScheduler:
         self.value = config.lambda_min
 
     def update(self, residuals):
+        if residuals.numel() == 0 or not torch.isfinite(residuals).all():
+            raise ValueError("AES requires nonempty finite TD residuals")
         with torch.no_grad():
             raw = torch.quantile(residuals.detach().abs().float().flatten(), self.config.q).item()
         self.ema = raw if self.ema is None else self.config.beta * self.ema + (1.0 - self.config.beta) * raw
@@ -30,6 +36,16 @@ class AESScheduler:
         scheduled = self.config.kappa * math.sqrt(max(self.accumulated, 0.0) / self.step)
         self.value = min(max(scheduled, self.config.lambda_min), self.config.lambda_max)
         return self.value
+
+    def state_dict(self):
+        return {"config": vars(self.config).copy(), "ema": self.ema,
+                "accumulated": self.accumulated, "step": self.step, "value": self.value}
+
+    def load_state_dict(self, state):
+        if state["config"] != vars(self.config):
+            raise ValueError("AES checkpoint configuration differs")
+        for key in ("ema", "accumulated", "step", "value"):
+            setattr(self, key, state[key])
 
     def scalars(self):
         return {

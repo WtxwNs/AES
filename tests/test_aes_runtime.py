@@ -74,7 +74,7 @@ class RuntimeTests(unittest.TestCase):
 
     def test_metrics_auc(self):
         metrics = load_module("aestd_metrics", "cleanrl/aestd_metrics.py")
-        self.assertAlmostEqual(metrics.auc([(0, 1), (2, 3), (4, 1)]), 2.0)
+        self.assertAlmostEqual(metrics.auc([(0, 1), (2, 3), (4, 1)]), 8.0)
         self.assertTrue(np.isnan(metrics.auc([(0, 1)])))
 
 

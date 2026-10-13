@@ -14,11 +14,13 @@ import tyro
 from stable_baselines3.common.buffers import ReplayBuffer
 from torch.utils.tensorboard import SummaryWriter
 try:
+    from cleanrl.reproduction import write_run_config, log_evaluation, save_training_state
     from cleanrl.aes import AESConfig, AESScheduler
-    from cleanrl.nonstationary import maybe_wrap_nonstationary, set_global_step
+    from cleanrl.nonstationary import maybe_wrap_nonstationary, set_global_step, make_task
 except ModuleNotFoundError:
+    from reproduction import write_run_config, log_evaluation, save_training_state
     from aes import AESConfig, AESScheduler
-    from nonstationary import maybe_wrap_nonstationary, set_global_step
+    from nonstationary import maybe_wrap_nonstationary, set_global_step, make_task
 
 
 @dataclass
@@ -96,8 +98,12 @@ def evaluate(envs, actor, deterministic=True, device='cuda'):
         dones = np.zeros((num_envs,)).astype(bool)
         s, _ = envs.reset(seed=range(num_envs))
         while not all(dones):
-            action, _, mean = actor.get_action(torch.Tensor(s).to(device))
-            a = mean.cpu().detach().numpy() if deterministic else action.cpu().detach().numpy()
+            if deterministic:
+                mean, _ = actor(torch.as_tensor(s, dtype=torch.float32, device=device))
+                a = (mean.tanh() * actor.action_scale + actor.action_bias).cpu().numpy()
+            else:
+                action, _, _ = actor.get_action(torch.as_tensor(s, dtype=torch.float32, device=device))
+                a = action.cpu().numpy()
             s_, r, terminated, truncated, _ = envs.step(a)
             done = terminated | truncated
             rewards += r * (1-dones)
@@ -108,10 +114,10 @@ def evaluate(envs, actor, deterministic=True, device='cuda'):
 def make_env(env_id, seed, idx, capture_video, run_name, args=None):
     def thunk():
         if capture_video and idx == 0:
-            env = gym.make(env_id, render_mode="rgb_array")
+            env = make_task(env_id, args, render_mode="rgb_array")
             env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
         else:
-            env = gym.make(env_id)
+            env = make_task(env_id, args)
         if args is not None:
             env = maybe_wrap_nonstationary(env, args)
         env = gym.wrappers.RecordEpisodeStatistics(env)
@@ -199,6 +205,9 @@ def train(args=None):
         run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
         if not args.description:
             args.description = f"runs/{run_name}"
+    if not args.description:
+        args.description = f"runs/{run_name}"
+    write_run_config(args.description, args)
     os.makedirs(args.description, exist_ok=True)
     writer = SummaryWriter(args.description)
     
@@ -273,6 +282,9 @@ def train(args=None):
     best_test_rewards = -np.inf
     # TRY NOT TO MODIFY: start the game
     obs, _ = envs.reset(seed=args.seed)
+    if args.eval_frequency > 0:
+        set_global_step(test_envs, 0)
+        log_evaluation(writer, args.description, 0, evaluate(test_envs, actor, deterministic=True, device=device))
     for global_step in range(args.total_timesteps):
         set_global_step(envs, global_step)
         # ALGO LOGIC: put action logic here
@@ -377,15 +389,15 @@ def train(args=None):
                 if args.autotune and aes is None:
                     writer.add_scalar("losses/alpha_loss", alpha_loss.item(), global_step)
             
-            if global_step % args.eval_frequency == 0:
-                set_global_step(test_envs, global_step)
-                test_rewards = evaluate(test_envs, actor, deterministic=False, device=device)
-                writer.add_scalar("Test/return", test_rewards, global_step)
-                if test_rewards>best_test_rewards:
-                    best_test_rewards = test_rewards
-                    torch.save(actor, os.path.join(f"{args.description}", 'test_rewards.pt'))
-                    print(f"save agent to: {args.description} with best return {best_test_rewards} at step {global_step}")
-                
+        completed_steps = global_step + 1
+        if args.eval_frequency > 0 and (completed_steps % args.eval_frequency == 0 or completed_steps == args.total_timesteps):
+            set_global_step(test_envs, completed_steps)
+            test_rewards = evaluate(test_envs, actor, deterministic=True, device=device)
+            log_evaluation(writer, args.description, completed_steps, test_rewards)
+
+    save_training_state(args.description, model=actor.state_dict(), args=vars(args),
+                        aes=None if aes is None else aes.state_dict(), step=args.total_timesteps)
+    test_envs.close()
 
     envs.close()
     writer.close()

@@ -1,4 +1,4 @@
-"""Best-effort Isaac Gym non-stationarity hooks for AES experiments."""
+"""Explicit physics hooks for Isaac experiments; unsupported drift fails early."""
 
 import numpy as np
 
@@ -7,8 +7,9 @@ class IsaacDriftWrapper:
     """Apply progress-aligned gravity/damping drift when the task exposes hooks.
 
     OmniIsaacGymEnvs tasks differ in how physics parameters are exposed. This
-    wrapper intentionally tries common setter/attribute names and otherwise
-    leaves the environment unchanged while preserving the training interface.
+    wrapper requires simulator-backed setters for non-steady runs and fails
+    before training when the task adapter is incomplete. Attribute-only writes
+    are insufficient evidence of an actual physics change.
     """
 
     def __init__(
@@ -33,6 +34,12 @@ class IsaacDriftWrapper:
         self.global_step = 0
         self._base_gravity = self._read_gravity()
         self._base_damping = self._read_damping()
+        if drift_pattern != "steady":
+            if self._base_gravity is None or self._base_damping is None:
+                raise RuntimeError("Non-stationary Isaac run requires readable gravity and damping plus simulator setters; this task has no validated adapter")
+            objects = (self.env, getattr(self.env, "task", None), getattr(self.env, "_task", None))
+            if not any(callable(getattr(obj, "set_gravity", None)) for obj in objects) or not any(callable(getattr(obj, "set_joint_damping", None)) for obj in objects):
+                raise RuntimeError("Task must expose simulator-backed set_gravity and set_joint_damping; plain attribute assignment is not physics drift")
 
     def __getattr__(self, name):
         return getattr(self.env, name)
@@ -51,9 +58,9 @@ class IsaacDriftWrapper:
         if self.drift_pattern == "steady":
             return 1.0, 1.0
         segment = max(self.drift_fraction, 1e-6)
-        local = (progress % segment) / segment
+        jumps = min(int(np.floor(progress / segment + 1e-10)), int(np.ceil(1 / segment)) - 1)
+        local = float(np.clip(progress / segment - jumps, 0., 1.))
         if self.drift_pattern == "abrupt":
-            jumps = int(progress / segment)
             if jumps == 0:
                 return 1.0, 1.0
             rng = np.random.default_rng(jumps)
@@ -72,7 +79,6 @@ class IsaacDriftWrapper:
                 self.damping_min + (self.damping_max - self.damping_min) * wave,
             )
         if self.drift_pattern == "mixed":
-            jumps = int(progress / segment)
             if jumps == 0:
                 return 1.0, 1.0
             abrupt = 1.0 if jumps % 2 == 0 else 0.0
@@ -83,6 +89,8 @@ class IsaacDriftWrapper:
         raise ValueError(f"Unknown drift_pattern: {self.drift_pattern}")
 
     def _apply_drift(self):
+        if self.drift_pattern == "steady":
+            return
         gravity_scale, damping_scale = self._scales()
         self._write_gravity(gravity_scale)
         self._write_damping(damping_scale)
@@ -92,7 +100,7 @@ class IsaacDriftWrapper:
             if obj is None:
                 continue
             if hasattr(obj, "gravity"):
-                return getattr(obj, "gravity")
+                return np.array(getattr(obj, "gravity"), copy=True)
         return None
 
     def _write_gravity(self, scale):
@@ -106,9 +114,7 @@ class IsaacDriftWrapper:
             if hasattr(obj, "set_gravity"):
                 obj.set_gravity(value)
                 return
-            if hasattr(obj, "gravity"):
-                setattr(obj, "gravity", value)
-                return
+
 
     def _read_damping(self):
         for obj in (self.env, getattr(self.env, "task", None), getattr(self.env, "_task", None)):
@@ -116,7 +122,7 @@ class IsaacDriftWrapper:
                 continue
             for name in ("joint_damping", "damping", "default_dof_damping"):
                 if hasattr(obj, name):
-                    return name, getattr(obj, name)
+                    return name, np.array(getattr(obj, name), copy=True)
         return None
 
     def _write_damping(self, scale):
@@ -124,8 +130,8 @@ class IsaacDriftWrapper:
             return
         name, value = self._base_damping
         for obj in (self.env, getattr(self.env, "task", None), getattr(self.env, "_task", None)):
-            if obj is not None and hasattr(obj, name):
-                setattr(obj, name, value * scale)
+            if obj is not None and callable(getattr(obj, "set_joint_damping", None)):
+                obj.set_joint_damping(value * scale)
                 return
 
 

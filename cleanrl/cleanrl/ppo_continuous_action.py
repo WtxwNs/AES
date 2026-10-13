@@ -13,11 +13,13 @@ import tyro
 from torch.distributions.normal import Normal
 from torch.utils.tensorboard import SummaryWriter
 try:
+    from cleanrl.reproduction import write_run_config, log_evaluation, save_training_state
     from cleanrl.aes import AESConfig, AESScheduler
-    from cleanrl.nonstationary import maybe_wrap_nonstationary, set_global_step
+    from cleanrl.nonstationary import maybe_wrap_nonstationary, set_global_step, make_task
 except ModuleNotFoundError:
+    from reproduction import write_run_config, log_evaluation, save_training_state
     from aes import AESConfig, AESScheduler
-    from nonstationary import maybe_wrap_nonstationary, set_global_step
+    from nonstationary import maybe_wrap_nonstationary, set_global_step, make_task
 
 
 @dataclass
@@ -113,10 +115,10 @@ class Args:
 def make_env(env_id, idx, capture_video, run_name, gamma, args=None, evaluation=False):
     def thunk():
         if capture_video and idx == 0:
-            env = gym.make(env_id, render_mode="rgb_array")
+            env = make_task(env_id, args, render_mode="rgb_array")
             env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
         else:
-            env = gym.make(env_id)
+            env = make_task(env_id, args)
         if args is not None:
             env = maybe_wrap_nonstationary(env, args)
         env = gym.wrappers.FlattenObservation(env)  # deal with dm_control's Dict observation space
@@ -199,7 +201,13 @@ def evaluate(envs, agent, device, observation_rms):
 if __name__ == "__main__":
     args = tyro.cli(Args)
     args.batch_size = int(args.num_envs * args.num_steps)
+    if args.num_minibatches < 1 or args.batch_size % args.num_minibatches:
+        raise ValueError("num_envs * num_steps must be divisible by num_minibatches")
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
+    if args.total_timesteps % args.batch_size:
+        raise ValueError("total_timesteps must be divisible by num_envs * num_steps; use --num-steps 1000 for a 1M-step paper run")
+    if args.eval_frequency > 0 and args.eval_frequency % args.num_envs:
+        raise ValueError("eval_frequency must be divisible by num_envs")
     args.num_iterations = args.total_timesteps // args.batch_size
     run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
     if args.track:
@@ -215,6 +223,7 @@ if __name__ == "__main__":
             save_code=True,
         )
     run_dir = args.description or f"runs/{run_name}"
+    write_run_config(run_dir, args)
     writer = SummaryWriter(run_dir)
     writer.add_text(
         "hyperparameters",
@@ -261,6 +270,9 @@ if __name__ == "__main__":
     next_obs = torch.Tensor(next_obs).to(device)
     next_done = torch.zeros(args.num_envs).to(device)
 
+    if args.eval_frequency > 0:
+        observation_rms = envs.envs[0].get_wrapper_attr("obs_rms")
+        log_evaluation(writer, run_dir, 0, evaluate(test_envs, agent, device, observation_rms))
     next_eval_step = args.eval_frequency
     for iteration in range(1, args.num_iterations + 1):
         # Annealing the rate if instructed to do so.
@@ -270,8 +282,8 @@ if __name__ == "__main__":
             optimizer.param_groups[0]["lr"] = lrnow
 
         for step in range(0, args.num_steps):
-            global_step += args.num_envs
             set_global_step(envs, global_step)
+            global_step += args.num_envs
             obs[step] = next_obs
             dones[step] = next_done
 
@@ -286,6 +298,12 @@ if __name__ == "__main__":
             next_obs, reward, terminations, truncations, infos = envs.step(action.cpu().numpy())
             next_done = np.logical_or(terminations, truncations)
             rewards[step] = torch.tensor(reward).to(device).view(-1)
+            # Time limits end the rollout episode but not the MDP value.
+            for index, truncated in enumerate(truncations):
+                if truncated and not terminations[index]:
+                    terminal_obs = torch.as_tensor(infos["final_observation"][index], dtype=torch.float32, device=device)
+                    with torch.no_grad():
+                        rewards[step, index] += args.gamma * agent.get_value(terminal_obs.unsqueeze(0)).reshape(())
             next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(next_done).to(device)
 
             if "final_info" in infos:
@@ -295,10 +313,17 @@ if __name__ == "__main__":
                         writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
                         writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
 
+            if args.eval_frequency > 0 and global_step >= next_eval_step:
+                set_global_step(test_envs, global_step)
+                observation_rms = envs.envs[0].get_wrapper_attr("obs_rms")
+                log_evaluation(writer, run_dir, global_step, evaluate(test_envs, agent, device, observation_rms))
+                next_eval_step += args.eval_frequency
+
         # bootstrap value if not done
         with torch.no_grad():
             next_value = agent.get_value(next_obs).reshape(1, -1)
             advantages = torch.zeros_like(rewards).to(device)
+            td_targets = torch.zeros_like(rewards)
             lastgaelam = 0
             for t in reversed(range(args.num_steps)):
                 if t == args.num_steps - 1:
@@ -307,7 +332,8 @@ if __name__ == "__main__":
                 else:
                     nextnonterminal = 1.0 - dones[t + 1]
                     nextvalues = values[t + 1]
-                delta = rewards[t] + args.gamma * nextvalues * nextnonterminal - values[t]
+                td_targets[t] = rewards[t] + args.gamma * nextvalues * nextnonterminal
+                delta = td_targets[t] - values[t]
                 advantages[t] = lastgaelam = delta + args.gamma * args.gae_lambda * nextnonterminal * lastgaelam
             returns = advantages + values
 
@@ -317,6 +343,7 @@ if __name__ == "__main__":
         b_actions = actions.reshape((-1,) + envs.single_action_space.shape)
         b_advantages = advantages.reshape(-1)
         b_returns = returns.reshape(-1)
+        b_td_targets = td_targets.reshape(-1)
         b_values = values.reshape(-1)
 
         # Optimizing the policy and value network
@@ -340,7 +367,7 @@ if __name__ == "__main__":
 
                 mb_advantages = b_advantages[mb_inds]
                 if args.norm_adv:
-                    mb_advantages = (mb_advantages - mb_advantages.mean()) / (mb_advantages.std() + 1e-8)
+                    mb_advantages = (mb_advantages - mb_advantages.mean()) / (mb_advantages.std(unbiased=False) + 1e-8)
 
                 # Policy loss
                 pg_loss1 = -mb_advantages * ratio
@@ -350,7 +377,7 @@ if __name__ == "__main__":
                 # Value loss
                 newvalue = newvalue.view(-1)
                 if aes is not None:
-                    ent_coef = aes.update(newvalue.detach() - b_returns[mb_inds].detach())
+                    ent_coef = aes.update(b_td_targets[mb_inds] - newvalue.detach())
                 if args.clip_vloss:
                     v_loss_unclipped = (newvalue - b_returns[mb_inds]) ** 2
                     v_clipped = b_values[mb_inds] + torch.clamp(
@@ -392,11 +419,6 @@ if __name__ == "__main__":
         writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
         writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
         writer.add_scalar("losses/explained_variance", explained_var, global_step)
-        if args.eval_frequency > 0 and global_step >= next_eval_step:
-            set_global_step(test_envs, global_step)
-            observation_rms = envs.envs[0].get_wrapper_attr("obs_rms")
-            writer.add_scalar("Test/return", evaluate(test_envs, agent, device, observation_rms), global_step)
-            next_eval_step = (global_step // args.eval_frequency + 1) * args.eval_frequency
         print("SPS:", int(global_step / (time.time() - start_time)))
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
@@ -426,6 +448,15 @@ if __name__ == "__main__":
             repo_id = f"{args.hf_entity}/{repo_name}" if args.hf_entity else repo_name
             push_to_hub(args, episodic_returns, repo_id, "PPO", run_dir, f"videos/{run_name}-eval")
 
+    if args.eval_frequency > 0 and global_step % args.eval_frequency:
+        set_global_step(test_envs, global_step)
+        observation_rms = envs.envs[0].get_wrapper_attr("obs_rms")
+        log_evaluation(writer, run_dir, global_step, evaluate(test_envs, agent, device, observation_rms))
+    save_training_state(run_dir, model=agent.state_dict(), args=vars(args),
+                        aes=None if aes is None else aes.state_dict(), step=global_step,
+                        observation_mean=envs.envs[0].get_wrapper_attr("obs_rms").mean,
+                        observation_var=envs.envs[0].get_wrapper_attr("obs_rms").var)
+    test_envs.close()
     envs.close()
     test_envs.close()
     writer.close()

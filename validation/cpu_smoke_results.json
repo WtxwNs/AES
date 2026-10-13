@@ -1,0 +1,663 @@
+{
+  "purpose": "40-step CPU execution checks, not paper performance measurements",
+  "executed_on": "2026-10-13",
+  "runs": [
+    {
+      "cell": "flow/Pendulum-v1/steady/aes/seed_1",
+      "run": {
+        "schema_version": 1,
+        "args": {
+          "exp_name": "flow_continuous_action",
+          "seed": 1,
+          "torch_deterministic": true,
+          "cuda": false,
+          "track": false,
+          "wandb_project_name": "cleanRL",
+          "wandb_entity": null,
+          "capture_video": false,
+          "env_id": "Pendulum-v1",
+          "total_timesteps": 40,
+          "buffer_size": 128,
+          "gamma": 0.99,
+          "tau": 0.005,
+          "batch_size": 8,
+          "learning_starts": 8,
+          "q_lr": 0.001,
+          "policy_frequency": 2,
+          "target_network_frequency": 1,
+          "noise_clip": 0.5,
+          "alpha": 0.2,
+          "autotune": false,
+          "grad_clip": 30,
+          "sigma_max": -0.3,
+          "sigma_min": -5.0,
+          "deterministic_action": true,
+          "use_aes": true,
+          "aes_q": 0.9,
+          "aes_beta": 0.95,
+          "aes_kappa": 1.0,
+          "aes_lambda_min": 0.0001,
+          "aes_lambda_max": 1.0,
+          "use_nonstationary_env": false,
+          "drift_pattern": "steady",
+          "drift_fraction": 0.2,
+          "mass_min": 0.7,
+          "mass_max": 1.3,
+          "friction_min": 0.5,
+          "friction_max": 1.5,
+          "eval_frequency": 20
+        },
+        "python": "3.12.14",
+        "torch": "2.5.1+cpu",
+        "numpy": "1.26.4",
+        "evaluation": "deterministic, 10 episodes, undiscounted raw return"
+      },
+      "evaluations": [
+        {
+          "step": 0,
+          "return": -1477.587105148148
+        },
+        {
+          "step": 20,
+          "return": -1474.599895804366
+        },
+        {
+          "step": 40,
+          "return": -1373.2633291338566
+        }
+      ]
+    },
+    {
+      "cell": "flow/Pendulum-v1/steady/baseline/seed_1",
+      "run": {
+        "schema_version": 1,
+        "args": {
+          "exp_name": "flow_continuous_action",
+          "seed": 1,
+          "torch_deterministic": true,
+          "cuda": false,
+          "track": false,
+          "wandb_project_name": "cleanRL",
+          "wandb_entity": null,
+          "capture_video": false,
+          "env_id": "Pendulum-v1",
+          "total_timesteps": 40,
+          "buffer_size": 128,
+          "gamma": 0.99,
+          "tau": 0.005,
+          "batch_size": 8,
+          "learning_starts": 8,
+          "q_lr": 0.001,
+          "policy_frequency": 2,
+          "target_network_frequency": 1,
+          "noise_clip": 0.5,
+          "alpha": 0.2,
+          "autotune": false,
+          "grad_clip": 30,
+          "sigma_max": -0.3,
+          "sigma_min": -5.0,
+          "deterministic_action": true,
+          "use_aes": false,
+          "aes_q": 0.9,
+          "aes_beta": 0.95,
+          "aes_kappa": 1.0,
+          "aes_lambda_min": 0.0001,
+          "aes_lambda_max": 1.0,
+          "use_nonstationary_env": false,
+          "drift_pattern": "steady",
+          "drift_fraction": 0.2,
+          "mass_min": 0.7,
+          "mass_max": 1.3,
+          "friction_min": 0.5,
+          "friction_max": 1.5,
+          "eval_frequency": 20
+        },
+        "python": "3.12.14",
+        "torch": "2.5.1+cpu",
+        "numpy": "1.26.4",
+        "evaluation": "deterministic, 10 episodes, undiscounted raw return"
+      },
+      "evaluations": [
+        {
+          "step": 0,
+          "return": -1477.587105148148
+        },
+        {
+          "step": 20,
+          "return": -1451.2373140809264
+        },
+        {
+          "step": 40,
+          "return": -1607.5093391286996
+        }
+      ]
+    },
+    {
+      "cell": "ppo/NonStationaryMultiGoal-v0/abrupt/aes/seed_1",
+      "run": {
+        "schema_version": 1,
+        "args": {
+          "exp_name": "ppo_continuous_action",
+          "seed": 1,
+          "torch_deterministic": true,
+          "cuda": false,
+          "track": false,
+          "wandb_project_name": "cleanRL",
+          "wandb_entity": null,
+          "capture_video": false,
+          "save_model": false,
+          "upload_model": false,
+          "hf_entity": "",
+          "env_id": "NonStationaryMultiGoal-v0",
+          "total_timesteps": 40,
+          "learning_rate": 0.0003,
+          "num_envs": 1,
+          "num_steps": 20,
+          "anneal_lr": true,
+          "gamma": 0.99,
+          "gae_lambda": 0.95,
+          "num_minibatches": 2,
+          "update_epochs": 2,
+          "norm_adv": true,
+          "clip_coef": 0.2,
+          "clip_vloss": true,
+          "ent_coef": 0.0,
+          "vf_coef": 0.5,
+          "max_grad_norm": 0.5,
+          "target_kl": null,
+          "use_aes": true,
+          "aes_q": 0.9,
+          "aes_beta": 0.95,
+          "aes_kappa": 1.0,
+          "aes_lambda_min": 0.0001,
+          "aes_lambda_max": 0.1,
+          "use_nonstationary_env": true,
+          "drift_pattern": "abrupt",
+          "drift_fraction": 0.2,
+          "mass_min": 0.7,
+          "mass_max": 1.3,
+          "friction_min": 0.5,
+          "friction_max": 1.5,
+          "eval_frequency": 20,
+          "batch_size": 20,
+          "minibatch_size": 10,
+          "num_iterations": 2
+        },
+        "python": "3.12.14",
+        "torch": "2.5.1+cpu",
+        "numpy": "1.26.4",
+        "evaluation": "deterministic, 10 episodes, undiscounted raw return"
+      },
+      "evaluations": [
+        {
+          "step": 0,
+          "return": -15118.295637119829
+        },
+        {
+          "step": 20,
+          "return": -13794.014119734686
+        },
+        {
+          "step": 40,
+          "return": -20211.282148493367
+        }
+      ]
+    },
+    {
+      "cell": "ppo/Pendulum-v1/steady/aes/seed_1",
+      "run": {
+        "schema_version": 1,
+        "args": {
+          "exp_name": "ppo_continuous_action",
+          "seed": 1,
+          "torch_deterministic": true,
+          "cuda": false,
+          "track": false,
+          "wandb_project_name": "cleanRL",
+          "wandb_entity": null,
+          "capture_video": false,
+          "save_model": false,
+          "upload_model": false,
+          "hf_entity": "",
+          "env_id": "Pendulum-v1",
+          "total_timesteps": 40,
+          "learning_rate": 0.0003,
+          "num_envs": 1,
+          "num_steps": 20,
+          "anneal_lr": true,
+          "gamma": 0.99,
+          "gae_lambda": 0.95,
+          "num_minibatches": 2,
+          "update_epochs": 2,
+          "norm_adv": true,
+          "clip_coef": 0.2,
+          "clip_vloss": true,
+          "ent_coef": 0.0,
+          "vf_coef": 0.5,
+          "max_grad_norm": 0.5,
+          "target_kl": null,
+          "use_aes": true,
+          "aes_q": 0.9,
+          "aes_beta": 0.95,
+          "aes_kappa": 1.0,
+          "aes_lambda_min": 0.0001,
+          "aes_lambda_max": 0.1,
+          "use_nonstationary_env": false,
+          "drift_pattern": "steady",
+          "drift_fraction": 0.2,
+          "mass_min": 0.7,
+          "mass_max": 1.3,
+          "friction_min": 0.5,
+          "friction_max": 1.5,
+          "eval_frequency": 20,
+          "batch_size": 20,
+          "minibatch_size": 10,
+          "num_iterations": 2
+        },
+        "python": "3.12.14",
+        "torch": "2.5.1+cpu",
+        "numpy": "1.26.4",
+        "evaluation": "deterministic, 10 episodes, undiscounted raw return"
+      },
+      "evaluations": [
+        {
+          "step": 0,
+          "return": -1165.8339364392214
+        },
+        {
+          "step": 20,
+          "return": -1159.6498107221469
+        },
+        {
+          "step": 40,
+          "return": -1171.544882023394
+        }
+      ]
+    },
+    {
+      "cell": "ppo/Pendulum-v1/steady/baseline/seed_1",
+      "run": {
+        "schema_version": 1,
+        "args": {
+          "exp_name": "ppo_continuous_action",
+          "seed": 1,
+          "torch_deterministic": true,
+          "cuda": false,
+          "track": false,
+          "wandb_project_name": "cleanRL",
+          "wandb_entity": null,
+          "capture_video": false,
+          "save_model": false,
+          "upload_model": false,
+          "hf_entity": "",
+          "env_id": "Pendulum-v1",
+          "total_timesteps": 40,
+          "learning_rate": 0.0003,
+          "num_envs": 1,
+          "num_steps": 20,
+          "anneal_lr": true,
+          "gamma": 0.99,
+          "gae_lambda": 0.95,
+          "num_minibatches": 2,
+          "update_epochs": 2,
+          "norm_adv": true,
+          "clip_coef": 0.2,
+          "clip_vloss": true,
+          "ent_coef": 0.0,
+          "vf_coef": 0.5,
+          "max_grad_norm": 0.5,
+          "target_kl": null,
+          "use_aes": false,
+          "aes_q": 0.9,
+          "aes_beta": 0.95,
+          "aes_kappa": 1.0,
+          "aes_lambda_min": 0.0001,
+          "aes_lambda_max": 0.1,
+          "use_nonstationary_env": false,
+          "drift_pattern": "steady",
+          "drift_fraction": 0.2,
+          "mass_min": 0.7,
+          "mass_max": 1.3,
+          "friction_min": 0.5,
+          "friction_max": 1.5,
+          "eval_frequency": 20,
+          "batch_size": 20,
+          "minibatch_size": 10,
+          "num_iterations": 2
+        },
+        "python": "3.12.14",
+        "torch": "2.5.1+cpu",
+        "numpy": "1.26.4",
+        "evaluation": "deterministic, 10 episodes, undiscounted raw return"
+      },
+      "evaluations": [
+        {
+          "step": 0,
+          "return": -1165.8339364392214
+        },
+        {
+          "step": 20,
+          "return": -1159.6498107221469
+        },
+        {
+          "step": 40,
+          "return": -1171.5446888460078
+        }
+      ]
+    },
+    {
+      "cell": "sac/Hopper-v4/abrupt/aes/seed_1",
+      "run": {
+        "schema_version": 1,
+        "args": {
+          "exp_name": "sac_continuous_action",
+          "seed": 1,
+          "torch_deterministic": true,
+          "cuda": false,
+          "track": false,
+          "wandb_project_name": "cleanRL",
+          "wandb_entity": null,
+          "capture_video": false,
+          "env_id": "Hopper-v4",
+          "total_timesteps": 40,
+          "buffer_size": 128,
+          "gamma": 0.99,
+          "tau": 0.005,
+          "batch_size": 8,
+          "learning_starts": 8,
+          "policy_lr": 0.0003,
+          "q_lr": 0.001,
+          "policy_frequency": 2,
+          "target_network_frequency": 1,
+          "noise_clip": 0.5,
+          "alpha": 0.2,
+          "autotune": true,
+          "use_aes": true,
+          "aes_q": 0.9,
+          "aes_beta": 0.95,
+          "aes_kappa": 1.0,
+          "aes_lambda_min": 0.0001,
+          "aes_lambda_max": 1.0,
+          "use_nonstationary_env": true,
+          "drift_pattern": "abrupt",
+          "drift_fraction": 0.2,
+          "mass_min": 0.7,
+          "mass_max": 1.3,
+          "friction_min": 0.5,
+          "friction_max": 1.5,
+          "eval_frequency": 20
+        },
+        "python": "3.12.14",
+        "torch": "2.5.1+cpu",
+        "numpy": "1.26.4",
+        "evaluation": "deterministic, 10 episodes, undiscounted raw return"
+      },
+      "evaluations": [
+        {
+          "step": 0,
+          "return": 21.73494868742483
+        },
+        {
+          "step": 20,
+          "return": 25.710174169220675
+        },
+        {
+          "step": 40,
+          "return": 33.5222636961366
+        }
+      ]
+    },
+    {
+      "cell": "sac/Pendulum-v1/steady/aes/seed_1",
+      "run": {
+        "schema_version": 1,
+        "args": {
+          "exp_name": "sac_continuous_action",
+          "seed": 1,
+          "torch_deterministic": true,
+          "cuda": false,
+          "track": false,
+          "wandb_project_name": "cleanRL",
+          "wandb_entity": null,
+          "capture_video": false,
+          "env_id": "Pendulum-v1",
+          "total_timesteps": 40,
+          "buffer_size": 128,
+          "gamma": 0.99,
+          "tau": 0.005,
+          "batch_size": 8,
+          "learning_starts": 8,
+          "policy_lr": 0.0003,
+          "q_lr": 0.001,
+          "policy_frequency": 2,
+          "target_network_frequency": 1,
+          "noise_clip": 0.5,
+          "alpha": 0.2,
+          "autotune": true,
+          "use_aes": true,
+          "aes_q": 0.9,
+          "aes_beta": 0.95,
+          "aes_kappa": 1.0,
+          "aes_lambda_min": 0.0001,
+          "aes_lambda_max": 1.0,
+          "use_nonstationary_env": false,
+          "drift_pattern": "steady",
+          "drift_fraction": 0.2,
+          "mass_min": 0.7,
+          "mass_max": 1.3,
+          "friction_min": 0.5,
+          "friction_max": 1.5,
+          "eval_frequency": 20
+        },
+        "python": "3.12.14",
+        "torch": "2.5.1+cpu",
+        "numpy": "1.26.4",
+        "evaluation": "deterministic, 10 episodes, undiscounted raw return"
+      },
+      "evaluations": [
+        {
+          "step": 0,
+          "return": -1393.6848598037554
+        },
+        {
+          "step": 20,
+          "return": -1344.530787818599
+        },
+        {
+          "step": 40,
+          "return": -1448.6505302085257
+        }
+      ]
+    },
+    {
+      "cell": "sac/Pendulum-v1/steady/baseline/seed_1",
+      "run": {
+        "schema_version": 1,
+        "args": {
+          "exp_name": "sac_continuous_action",
+          "seed": 1,
+          "torch_deterministic": true,
+          "cuda": false,
+          "track": false,
+          "wandb_project_name": "cleanRL",
+          "wandb_entity": null,
+          "capture_video": false,
+          "env_id": "Pendulum-v1",
+          "total_timesteps": 40,
+          "buffer_size": 128,
+          "gamma": 0.99,
+          "tau": 0.005,
+          "batch_size": 8,
+          "learning_starts": 8,
+          "policy_lr": 0.0003,
+          "q_lr": 0.001,
+          "policy_frequency": 2,
+          "target_network_frequency": 1,
+          "noise_clip": 0.5,
+          "alpha": 0.2,
+          "autotune": true,
+          "use_aes": false,
+          "aes_q": 0.9,
+          "aes_beta": 0.95,
+          "aes_kappa": 1.0,
+          "aes_lambda_min": 0.0001,
+          "aes_lambda_max": 1.0,
+          "use_nonstationary_env": false,
+          "drift_pattern": "steady",
+          "drift_fraction": 0.2,
+          "mass_min": 0.7,
+          "mass_max": 1.3,
+          "friction_min": 0.5,
+          "friction_max": 1.5,
+          "eval_frequency": 20
+        },
+        "python": "3.12.14",
+        "torch": "2.5.1+cpu",
+        "numpy": "1.26.4",
+        "evaluation": "deterministic, 10 episodes, undiscounted raw return"
+      },
+      "evaluations": [
+        {
+          "step": 0,
+          "return": -1393.6848598037554
+        },
+        {
+          "step": 20,
+          "return": -1367.1351129213222
+        },
+        {
+          "step": 40,
+          "return": -1331.650747780232
+        }
+      ]
+    },
+    {
+      "cell": "sql/Pendulum-v1/steady/aes/seed_1",
+      "run": {
+        "schema_version": 1,
+        "args": {
+          "exp_name": "sql_continuous_action",
+          "seed": 1,
+          "torch_deterministic": true,
+          "cuda": false,
+          "track": false,
+          "wandb_project_name": "cleanRL",
+          "wandb_entity": null,
+          "capture_video": false,
+          "env_id": "Pendulum-v1",
+          "total_timesteps": 40,
+          "buffer_size": 128,
+          "gamma": 0.99,
+          "tau": 0.005,
+          "batch_size": 8,
+          "learning_starts": 8,
+          "policy_lr": 0.0003,
+          "q_lr": 0.001,
+          "policy_frequency": 1,
+          "target_network_frequency": 1,
+          "noise_clip": 0.5,
+          "alpha": 1.0,
+          "autotune": false,
+          "use_aes": true,
+          "aes_q": 0.9,
+          "aes_beta": 0.95,
+          "aes_kappa": 1.0,
+          "aes_lambda_min": 0.0001,
+          "aes_lambda_max": 1.0,
+          "use_nonstationary_env": false,
+          "drift_pattern": "steady",
+          "drift_fraction": 0.2,
+          "mass_min": 0.7,
+          "mass_max": 1.3,
+          "friction_min": 0.5,
+          "friction_max": 1.5,
+          "eval_frequency": 20,
+          "value_particles": 8,
+          "kernel_particles": 4
+        },
+        "python": "3.12.14",
+        "torch": "2.5.1+cpu",
+        "numpy": "1.26.4",
+        "evaluation": "deterministic, 10 episodes, undiscounted raw return"
+      },
+      "evaluations": [
+        {
+          "step": 0,
+          "return": -1242.023451591989
+        },
+        {
+          "step": 20,
+          "return": -1330.1249901740837
+        },
+        {
+          "step": 40,
+          "return": -1504.456761042017
+        }
+      ]
+    },
+    {
+      "cell": "sql/Pendulum-v1/steady/baseline/seed_1",
+      "run": {
+        "schema_version": 1,
+        "args": {
+          "exp_name": "sql_continuous_action",
+          "seed": 1,
+          "torch_deterministic": true,
+          "cuda": false,
+          "track": false,
+          "wandb_project_name": "cleanRL",
+          "wandb_entity": null,
+          "capture_video": false,
+          "env_id": "Pendulum-v1",
+          "total_timesteps": 40,
+          "buffer_size": 128,
+          "gamma": 0.99,
+          "tau": 0.005,
+          "batch_size": 8,
+          "learning_starts": 8,
+          "policy_lr": 0.0003,
+          "q_lr": 0.001,
+          "policy_frequency": 1,
+          "target_network_frequency": 1,
+          "noise_clip": 0.5,
+          "alpha": 1.0,
+          "autotune": false,
+          "use_aes": false,
+          "aes_q": 0.9,
+          "aes_beta": 0.95,
+          "aes_kappa": 1.0,
+          "aes_lambda_min": 0.0001,
+          "aes_lambda_max": 1.0,
+          "use_nonstationary_env": false,
+          "drift_pattern": "steady",
+          "drift_fraction": 0.2,
+          "mass_min": 0.7,
+          "mass_max": 1.3,
+          "friction_min": 0.5,
+          "friction_max": 1.5,
+          "eval_frequency": 20,
+          "value_particles": 8,
+          "kernel_particles": 4
+        },
+        "python": "3.12.14",
+        "torch": "2.5.1+cpu",
+        "numpy": "1.26.4",
+        "evaluation": "deterministic, 10 episodes, undiscounted raw return"
+      },
+      "evaluations": [
+        {
+          "step": 0,
+          "return": -1242.023451591989
+        },
+        {
+          "step": 20,
+          "return": -1330.1249901740837
+        },
+        {
+          "step": 40,
+          "return": -1504.456761042017
+        }
+      ]
+    }
+  ]
+}
