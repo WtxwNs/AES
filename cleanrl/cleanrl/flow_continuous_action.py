@@ -14,11 +14,13 @@ import tyro
 from stable_baselines3.common.buffers import ReplayBuffer
 from torch.utils.tensorboard import SummaryWriter
 try:
+    from cleanrl.reproduction import write_run_config, log_evaluation, save_training_state
     from cleanrl.aes import AESConfig, AESScheduler
-    from cleanrl.nonstationary import maybe_wrap_nonstationary, set_global_step
+    from cleanrl.nonstationary import maybe_wrap_nonstationary, set_global_step, make_task
 except ModuleNotFoundError:
+    from reproduction import write_run_config, log_evaluation, save_training_state
     from aes import AESConfig, AESScheduler
-    from nonstationary import maybe_wrap_nonstationary, set_global_step
+    from nonstationary import maybe_wrap_nonstationary, set_global_step, make_task
 
 try:
     from cleanrl.nf.nets import MLP
@@ -121,10 +123,10 @@ def evaluate(envs, policy, deterministic=True, device='cuda'):
 def make_env(env_id, seed, idx, capture_video, run_name, args=None):
     def thunk():
         if capture_video and idx == 0:
-            env = gym.make(env_id, render_mode="rgb_array")
+            env = make_task(env_id, args, render_mode="rgb_array")
             env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
         else:
-            env = gym.make(env_id)
+            env = make_task(env_id, args)
 
         if args is not None:
             env = maybe_wrap_nonstationary(env, args)
@@ -205,7 +207,7 @@ class FlowPolicy(nn.Module):
     def sample(self, num_samples, obs, deterministic=False):
         obs = torch.as_tensor(obs, dtype=torch.float32, device=self.device)
         if deterministic: # (Warning: This is only implemented for FlowAgent with the additive coupling layers and the Gaussian prior)
-            eps = torch.randn((num_samples,) + self.prior.shape, dtype=obs.dtype, device=obs.device)
+            eps = torch.zeros((num_samples,) + self.prior.shape, dtype=obs.dtype, device=obs.device)
             act, _ = self.prior.get_mean_std(eps, context=obs)
             log_q = self.prior.log_prob(act, context=obs)
         else:
@@ -266,6 +268,9 @@ def train(args=None):
         run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
         if not args.description:
             args.description = f"runs/{run_name}"
+    if not args.description:
+        args.description = f"runs/{run_name}"
+    write_run_config(args.description, args)
     os.makedirs(args.description, exist_ok=True)
     writer = SummaryWriter(args.description)
     
@@ -353,6 +358,9 @@ def train(args=None):
     best_test_rewards = -np.inf
     # TRY NOT TO MODIFY: start the game
     obs, _ = envs.reset(seed=args.seed)
+    if args.eval_frequency > 0:
+        set_global_step(test_envs, 0)
+        log_evaluation(writer, args.description, 0, evaluate(test_envs, policy, deterministic=True, device=device))
     for global_step in range(args.total_timesteps):
         set_global_step(envs, global_step)
         # ALGO LOGIC: put action logic here
@@ -451,16 +459,15 @@ def train(args=None):
                 if args.autotune and aes is None:
                     writer.add_scalar("losses/alpha_loss", alpha_loss.item(), global_step)
                             
-            if global_step % args.eval_frequency == 0:
-                set_global_step(test_envs, global_step)
-                test_rewards = evaluate(test_envs, policy, deterministic=args.deterministic_action, device=device)
-                writer.add_scalar("Test/return", test_rewards, global_step)
-                writer.add_scalar("Steps", global_step, global_step)
-                if test_rewards>best_test_rewards:
-                    best_test_rewards = test_rewards
-                    torch.save(policy, os.path.join(f"{args.description}", 'test_rewards.pt'))
-                    print(f"save agent to: {args.description} with best return {best_test_rewards} at step {global_step}")
-                
+        completed_steps = global_step + 1
+        if args.eval_frequency > 0 and (completed_steps % args.eval_frequency == 0 or completed_steps == args.total_timesteps):
+            set_global_step(test_envs, completed_steps)
+            test_rewards = evaluate(test_envs, policy, deterministic=True, device=device)
+            log_evaluation(writer, args.description, completed_steps, test_rewards)
+
+    save_training_state(args.description, model=policy.state_dict(), args=vars(args),
+                        aes=None if aes is None else aes.state_dict(), step=args.total_timesteps)
+    test_envs.close()
 
     envs.close()
     writer.close()

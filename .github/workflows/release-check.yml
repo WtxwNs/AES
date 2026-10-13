@@ -1,16 +1,14 @@
-name: Release check
-
-on:
-  push:
-  pull_request:
-
+name: Reproduction checks
+on: [push, pull_request]
 jobs:
-  release-check:
+  cpu:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
-      - name: Run static release checks
-        run: python scripts/check_release.py --skip-cache-check
+          python-version: '3.12'
+      - run: pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cpu
+      - run: pip install -r cleanrl/requirements-aes.txt
+      - run: python scripts/check_release.py
+      - run: OMP_NUM_THREADS=1 python -m unittest discover -s tests -v

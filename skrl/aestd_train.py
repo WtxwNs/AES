@@ -79,7 +79,7 @@ def main():
 
     cfg = base_cfg(args)
     if args.algorithm == "sac":
-        cfg["learn_entropy"] = False
+        cfg["learn_entropy"] = not args.use_aes
         cfg["initial_entropy_value"] = args.sac_alpha
         cfg["actor_learning_rate"] = 3e-4
         cfg["critic_learning_rate"] = 3e-4

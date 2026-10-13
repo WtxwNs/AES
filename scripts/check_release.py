@@ -27,6 +27,9 @@ COMPILE_TARGETS = [
     "toy/toy_envs/multi_goal.py",
     "toy/train.py",
     "external_sql_aes_adapter.py",
+    "cleanrl/cleanrl/sql_continuous_action.py",
+    "cleanrl/cleanrl/reproduction.py",
+    "scripts/paper_matrix.py",
 ]
 
 REQUIRED_FILES = [

@@ -15,3 +15,9 @@ toy/runs/
 *.pt
 *.pth
 events.out.tfevents.*
+
+runs_paper/
+runs_smoke/
+paper_matrix.json
+mujoco_matrix.json
+toy_matrix.json

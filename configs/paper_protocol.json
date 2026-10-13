@@ -1,0 +1,23 @@
+{
+  "paper": "https://arxiv.org/abs/2601.19624",
+  "seeds": [1, 2, 3, 4, 5],
+  "drifts": ["steady", "abrupt", "linear", "periodic", "mixed"],
+  "variants": ["baseline", "aes"],
+  "algorithms": ["sac", "ppo", "sql", "flow"],
+  "algorithm_names": {"flow": "flow-based MEow carrier; original run identity unverified"},
+  "families": {
+    "toy": ["NonStationaryMultiGoal-v0"],
+    "mujoco": ["Hopper-v4", "HalfCheetah-v4", "Walker2d-v4", "Ant-v4", "Humanoid-v4"],
+    "isaac": ["AllegroHand", "Ant", "Anymal", "FrankaCabinet", "Humanoid", "Ingenuity"]
+  },
+  "evaluation": {"frequency": 10000, "episodes": 10, "deterministic": true},
+  "drift_fraction": 0.2,
+  "aes": {"q": 0.9, "beta": 0.95, "kappa": 1.0, "lambda_min": 0.0001, "lambda_max_off_policy": 1.0, "lambda_max_ppo": 0.1},
+  "unresolved": [
+    "Original per-task training budgets and non-entropy hyperparameters are not specified completely; CLI horizon is explicit.",
+    "SQL here is a new PyTorch SVGD reconstruction, not the unavailable original experiment implementation.",
+    "Isaac task-specific simulator adapters, deterministic evaluation path, PPO and SQL integrations are incomplete.",
+    "Original per-seed learning curves and checkpoints are not included.",
+    "Toy raw returns can have negative AUC: paper ratio direction then reverses; no offset is invented."
+  ]
+}

@@ -25,6 +25,8 @@ class AESScheduler:
         self.value = lambda_min
 
     def update(self, td_errors):
+        if td_errors.numel() == 0 or not torch.isfinite(td_errors).all():
+            raise ValueError("AES requires nonempty finite TD residuals")
         with torch.no_grad():
             raw = torch.quantile(td_errors.detach().abs().float().flatten(), self.q).item()
 
